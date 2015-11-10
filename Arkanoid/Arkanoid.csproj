@@ -70,6 +70,8 @@
   <ItemGroup>
     <Content Include="css\main.css" />
     <Content Include="css\reset.css" />
+    <Content Include="resources\brick.png" />
+    <Content Include="resources\brick_normal.jpg" />
     <Content Include="resources\DEEP_SPACE.jpg" />
     <Content Include="index.html" />
     <Content Include="packages.config" />
@@ -88,6 +90,7 @@
     <Content Include="Scripts\orbitControl.js" />
     <Content Include="Scripts\three.js\build\three.js" />
     <Content Include="Scripts\three.js\build\three.min.js" />
+    <Content Include="Scripts\tween.js" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
@@ -95,8 +98,11 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="Arkanoid.ts" />
+    <TypeScriptCompile Include="Directions.ts" />
     <TypeScriptCompile Include="GameLevel.ts" />
+    <TypeScriptCompile Include="Helpers.ts" />
     <TypeScriptCompile Include="main.ts" />
+    <TypeScriptCompile Include="KeyCodeEnum.ts" />
     <TypeScriptCompile Include="Scripts\typings\threejs\detector.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\threejs\three-canvasrenderer.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\threejs\three-copyshader.d.ts" />

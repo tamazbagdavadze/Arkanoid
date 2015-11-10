@@ -1,11 +1,11 @@
 ﻿module Arkanoid {
     export enum GameLevel {
-        One  = 4,
-        Two  = 8,
-        Three  = 16,
-        Four  = 32,
-        Five  = 64,
-        Fix  = 128,
-        Seven  = 256,
+        One  = 1,
+        Two  = 2,
+        Three  = 3,
+        Four  = 4,
+        Five  = 5,
+        Six  = 6,
+        Seven  = 7,
     }
 }

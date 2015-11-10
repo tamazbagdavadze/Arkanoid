@@ -1,7 +1,7 @@
 ﻿/// <reference path="Arkanoid.ts"/>
 
 
-import ark = Arkanoid.A;
+import ark = Arkanoid.ArkanoidGame;
 
 var game = new ark();
 
