@@ -28,6 +28,15 @@ module Arkanoid {
 
         lineWidth = 10;
 
+        gridColor = 0x006600;
+
+        gridFloor: THREE.GridHelper;
+
+        rightWall: THREE.Object3D;
+        leftWall: THREE.Object3D;
+        backWall: THREE.Object3D;
+
+        
 
         init() {
             this.scene = new THREE.Scene();
@@ -47,20 +56,54 @@ module Arkanoid {
             light.position.set(-5, 5, 5);
             this.scene.add(light);
             
-            var gridFloor = new THREE.GridHelper(this.lineWidth, this.blockSize);
-            gridFloor.setColors(0x006600, 0x006600);
-            gridFloor.position.set(0, -1, 0);
-            this.scene.add(gridFloor);
-            
+
+            this.buildWalls();
+
+           
             this.camera.position.z = 25;
             this.camera.position.y = 20;
-            this.camera.lookAt(gridFloor.position);
+            this.camera.lookAt(this.gridFloor.position);
             
             this.render();
             this.initEvents();
 
 
             //this.startBallMoving();
+        }
+
+
+        private buildWalls = () => {
+            
+            var areaSize = this.lineWidth * this.blockSize;
+
+            this.gridFloor = new THREE.GridHelper(this.lineWidth, this.blockSize);
+            this.gridFloor.setColors(this.gridColor, this.gridColor);
+            this.gridFloor.position.set(0, -1, 0);
+            this.scene.add(this.gridFloor);
+
+            this.rightWall = new THREE.Object3D();
+
+            for (let i = this.lineWidth/-2 + 1; i < this.lineWidth/2; i++) {
+                let gridRightWall = new THREE.GridHelper(this.blockSize, this.blockSize / 4);
+                gridRightWall.setColors(this.gridColor, this.gridColor);
+                gridRightWall.position.set(i*this.blockSize, 0, 0);
+                this.rightWall.add(gridRightWall);
+            }
+
+            this.rightWall.position = new THREE.Vector3(-areaSize / 2, 1, 0);
+            this.rightWall.rotation.x = Math.PI / 2;
+            this.rightWall.rotation.z = Math.PI / 2;
+            this.scene.add(this.rightWall);
+
+            this.leftWall = this.rightWall.clone();
+            this.leftWall.position.x = areaSize / 2;
+            this.scene.add(this.leftWall);
+
+            this.backWall = this.rightWall.clone();
+            this.backWall.position = new THREE.Vector3(0, 1, -areaSize / 2);
+            this.backWall.rotation.z = 0;
+            this.scene.add(this.backWall);
+
         }
 
 
@@ -140,12 +183,13 @@ module Arkanoid {
         }
 
         private movePlayer = (direction: Directions) => {
-            
+
+            var areaSize = this.lineWidth * this.blockSize;
             
             switch (direction) {
             case Directions.Left:
             {
-                if (this.playerItem.position.x - this.playerSize + 1 <= this.lineWidth * this.blockSize / -2) {
+                if (this.playerItem.position.x - this.playerSize + 1 <= areaSize / -2) {
                     return;
                 }
                 this.playerItem.position.x -= this.playerStep;
@@ -153,7 +197,7 @@ module Arkanoid {
             }
             case Directions.Right:
             {
-                if (this.playerItem.position.x + this.playerSize - 1 >= this.lineWidth * this.blockSize / 2) {
+                if (this.playerItem.position.x + this.playerSize - 1 >= areaSize / 2) {
                     return;
                 }
                 this.playerItem.position.x += this.playerStep;
