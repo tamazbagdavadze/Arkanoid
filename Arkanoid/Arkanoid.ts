@@ -36,9 +36,10 @@ module Arkanoid {
         leftWall: THREE.Object3D;
         backWall: THREE.Object3D;
 
-        
+        t: TWEEN.Tween;
 
-        init() {
+        
+        newGame() {
             this.scene = new THREE.Scene();
             this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
 
@@ -68,10 +69,20 @@ module Arkanoid {
             this.initEvents();
 
 
+//            this.t = new TWEEN.Tween(this.leftWall.position);
+//            this.t.to({ 'x': this.rightWall.position.x }, 1000);
+//            this.t.onComplete(() => {
+//                alert("fsfsdf");
+//            });
+//
+//            this.t.easing(TWEEN.Easing.Linear.None);
+
+            //this.t.start();
+
+
             //this.startBallMoving();
         }
-
-
+        
         private buildWalls = () => {
             
             var areaSize = this.lineWidth * this.blockSize;
@@ -105,7 +116,6 @@ module Arkanoid {
             this.scene.add(this.backWall);
 
         }
-
 
         private startBallMoving =() => {
             setInterval(this.ballMove, 100);
@@ -165,21 +175,32 @@ module Arkanoid {
             var lineCount = this.level.valueOf();
             
             this.array = make2DArray<THREE.Mesh>(this.lineWidth, lineCount);
-            
-            
-            for (let i = 0; i < lineCount; i++) {
 
-                for (let j = 0; j < this.lineWidth; j++) {
+
+//            this.array = new Array<Array<THREE.Mesh>>(this.lineWidth);
+//
+//            for (let k = 0; k < this.lineWidth; k++) {
+//                this.array[k] = new Array<THREE.Mesh>(3);
+//            }
+
+
+
+
+            for (let i = 0; i < this.lineWidth; i++) {
+
+                for (let j = 0; j < lineCount; j++) {
 
                     let block = this.createBlock(this.blockSize);
 
-                    block.position.z = i * 2 - 9;
-                    block.position.x = j * 2 - 9;
+                    block.position.z = j * 2 - 9;
+                    block.position.x = i * 2 - 9;
                     this.array[i][j] = block;
 
                     this.scene.add(block);
                 }
             }
+
+            console.log(this.array);
         }
 
         private movePlayer = (direction: Directions) => {
@@ -261,6 +282,11 @@ module Arkanoid {
         }
 
         private render = () => {
+
+            this.collision();
+
+            TWEEN.update();
+
             this.renderer.setSize(window.innerWidth, window.innerHeight);
             this.camera.aspect = window.innerWidth / window.innerHeight;
             
@@ -269,7 +295,51 @@ module Arkanoid {
             requestAnimationFrame(this.render);
             this.renderer.render(this.scene, this.camera);
         }
+        
+        private collision = () => {
 
+            var ball = this.ball;
+
+            var originPoint = ball.position.clone();
+            
+            for (let vertexIndex = 0; vertexIndex < ball.geometry.vertices.length; vertexIndex++) {
+
+                let localVertex = ball.geometry.vertices[vertexIndex].clone();
+                let globalVertex = localVertex.applyMatrix4(ball.matrix);
+                let directionVector = globalVertex.sub(ball.position);
+                
+                let ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
+
+                let objs = convert2DTo1DArray<THREE.Mesh>(this.array);
+                
+                let collisionResults = ray.intersectObjects(objs);
+                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+                    console.log("collision blocks" + collisionResults.length+" " + collisionResults[0].distance);
+                }
+
+//                objs = [this.rightWall];
+//
+//                collisionResults = ray.intersectObjects(objs);
+//                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+//                    console.log("collision rightwall" + collisionResults.length + " " + collisionResults[0].distance);
+//                }
+//
+//                objs = [this.leftWall];
+//
+//                collisionResults = ray.intersectObjects(objs);
+//                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+//                    console.log("collision leftWall" + collisionResults.length + " " + collisionResults[0].distance);
+//                }
+//
+//                objs = [this.backWall];
+//
+//                collisionResults = ray.intersectObjects(objs);
+//                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+//                    console.log("collision backWall" + collisionResults.length + " " + collisionResults[0].distance);
+//                }
+            }	
+        }
+        
         private createBlock = (x: number, y: number = null, z: number = null): THREE.Mesh => {
             
             if (y == null) {

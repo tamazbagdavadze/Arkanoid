@@ -1543,7 +1543,7 @@ intellisense.annotate(jQuery.fn, {
     ///   <returns type="Number" />
     /// </signature>
   },
-  'init': function() {
+  newGame: function() {
     /// <signature>
     ///   <summary>Accepts a string containing a CSS selector which is then used to match a set of elements.</summary>
     ///   <param name="selector" type="String">A string containing a selector expression</param>

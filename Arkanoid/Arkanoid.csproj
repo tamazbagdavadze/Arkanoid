@@ -88,6 +88,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Scripts\orbitControl.js" />
+    <Content Include="Scripts\physi.js" />
     <Content Include="Scripts\three.js\build\three.js" />
     <Content Include="Scripts\three.js\build\three.min.js" />
     <Content Include="Scripts\tween.js" />
@@ -119,6 +120,7 @@
     <TypeScriptCompile Include="Scripts\typings\threejs\three-vrcontrols.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\threejs\three-vreffect.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\threejs\three.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\tween.js\tween.js.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />

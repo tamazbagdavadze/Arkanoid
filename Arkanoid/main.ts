@@ -5,4 +5,4 @@ import ark = Arkanoid.ArkanoidGame;
 
 var game = new ark();
 
-game.init();
+game.newGame();

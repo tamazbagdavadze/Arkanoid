@@ -3,13 +3,13 @@
     export function make2DArray<T>(width: number, height: number = null): T[][] {
 
         height = height == null ? width : height;
-
+        
         var arr = Array<Array<T>>(width);
 
         for (let i = 0; i < width; i++) {
             arr[i] = Array<T>(height);
         }
-
+        
         return arr;
     }
 
