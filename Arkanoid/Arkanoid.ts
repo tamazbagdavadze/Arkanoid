@@ -17,7 +17,7 @@ module Arkanoid {
 
         orbitControler: THREE.OrbitControls;
         
-        array : THREE.Mesh[][];
+        blocks : THREE.Mesh[][];
    
         playerItem: THREE.Mesh;
         playerSize: number;
@@ -44,7 +44,7 @@ module Arkanoid {
         currentBallTween: TWEEN.Tween;
         
         currentKeyTimeoutId:number = null;
-
+        
         get config(): Config {
              return Config.clone(this.currentConfig);
         }
@@ -67,7 +67,7 @@ module Arkanoid {
 
             this.currentConfig = config;
 
-            this.initBlocks();
+            this.buildBlocks();
             this.initPlayer();
             this.initBall();
             this.buildWalls();
@@ -79,15 +79,23 @@ module Arkanoid {
             this.render();
             this.initEvents();
             
-//            this.start();
+            this.start();
         }
         
-        private start =() => {
+        private start = () => {
+
+            //TODO remove this bullshit and move the fuckin ball
+
             this.currentBallTween = new TWEEN.Tween(this.ball.position);
-            this.currentBallTween.to({ 'x': this.getRandomNumInRange(this.currentConfig.lineWidth / 2), 'z': -this.currentConfig.lineWidth }, 5000);
-            this.currentBallTween.onComplete(() => {
-                alert("fsfsdf");
-            });
+            this.currentBallTween.to(
+            {
+                    'x': this.getRandomIntInRange(this.currentConfig.lineWidth / 2),
+                    'z': -this.currentConfig.lineWidth
+            }, 5000);
+
+//            this.currentBallTween.onComplete(() => {
+//                alert("fsfsdf");
+//            });
 
             this.currentBallTween.easing(TWEEN.Easing.Linear.None);
             this.currentBallTween.start();
@@ -138,7 +146,7 @@ module Arkanoid {
             this.scene.add(this.backWall);
 
         }
-        
+      
         private initBall = () => {
             
             var geometry = new THREE.SphereGeometry(0.5, 32, 16);
@@ -182,10 +190,10 @@ module Arkanoid {
             this.scene.add(this.playerItem);
         }
 
-        private initBlocks = () => {
+        private buildBlocks = () => {
             var lineCount = this.currentConfig.currentGameLevel.valueOf();
             
-            this.array = make2DArray<THREE.Mesh>(this.currentConfig.lineWidth, lineCount);
+            this.blocks = make2DArray<THREE.Mesh>(this.currentConfig.lineWidth, lineCount);
             
             for (let i = 0; i < this.currentConfig.lineWidth; i++) {
 
@@ -195,12 +203,78 @@ module Arkanoid {
 
                     block.position.z = j * 2 - 9;
                     block.position.x = i * 2 - 9;
-                    this.array[i][j] = block;
+                    this.blocks[i][j] = block;
 
                     this.scene.add(block);
                 }
             }
             
+        }
+
+        private breakBlock = (block:THREE.Object3D) => {
+
+            var blockVector = block.position.clone();
+            this.removeBlock(block);
+
+            var miniBlocks = [];
+
+            for (let i = 0; i < 50; i++) {
+                let miniBlock = this.createBlock(0.2);
+                miniBlock.position = blockVector.clone();
+                miniBlocks.push(miniBlock);
+                this.scene.add(miniBlock);
+            }
+
+            var tweens = Array<TWEEN.Tween>(miniBlocks.length);
+
+            miniBlocks.forEach((obj, i, arr)=> {
+                var tween = new TWEEN.Tween(obj.position);
+                
+                var rangeX = this.getRandomIntInRange(this.currentConfig.blockSize);
+                var rangeY = this.getRandomIntInRange(this.currentConfig.blockSize);
+                var rangeZ = this.getRandomIntInRange(this.currentConfig.blockSize);
+
+                var destination = new THREE.Vector3(rangeX, rangeY, rangeZ);
+                tween.onComplete(() => {
+                    this.scene.remove(obj);
+                    obj = null;
+                });
+                tween.to(destination, 1200);
+                tween.easing(TWEEN.Easing.Exponential.Out);
+                tween.onUpdate(() => {
+                    obj.rotation.x++;
+                    obj.rotation.y++;
+                    obj.rotation.z++;
+                });
+                tweens.push(tween);
+            });
+
+            tweens.forEach((obj, i, arr) => {
+                obj.start();
+            });
+
+            
+
+            //TODO random shit
+        }
+
+        private removeBlock = (block: THREE.Object3D) => {
+
+            if (block == null) { // needs to repair other part
+                return;
+            }
+
+            var lineCount = this.currentConfig.currentGameLevel.valueOf();
+            var lineWidth = this.currentConfig.lineWidth;
+
+            for (let i = 0; i < lineWidth; i++) {
+                for (let j = 0; j < lineCount; j++) {
+                    if (this.blocks[i][j].position.equals(block.position)) {
+                        this.scene.remove(this.blocks[i][j]);
+                        this.blocks[i][j] = null;
+                    }
+                }
+            } 
         }
 
         private movePlayer = (direction: Directions) => {
@@ -343,42 +417,23 @@ module Arkanoid {
                 
                 let ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
 
-                let objs = convert2DTo1DArray<THREE.Mesh>(this.array);
+                let objs = convert2DTo1DArray<THREE.Mesh>(this.blocks);
                 
                 let collisionResults = ray.intersectObjects(objs);
                 if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-                    console.log("collision blocks " + collisionResults.length + " " + collisionResults[0].distance);
+                    console.log(`collision blocks ${collisionResults.length} ${collisionResults[0].distance}`);
+                    this.currentBallTween.stop();
+                    let block = collisionResults[0].object;
+                    this.breakBlock(block);
                 }
 
                 objs = [this.playerItem];
 
                 collisionResults = ray.intersectObjects(objs);
                 if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-                    console.log("collision playerItem " + collisionResults.length + " " + collisionResults[0].distance);
+                    console.log(`collision playerItem ${collisionResults.length} ${collisionResults[0].distance}`);
                 }
-
-
-
-//                objs = [this.rightWall];
-//
-//                collisionResults = ray.intersectObjects(objs);
-//                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-//                    console.log("collision rightwall" + collisionResults.length + " " + collisionResults[0].distance);
-//                }
-//
-//                objs = [this.leftWall];
-//
-//                collisionResults = ray.intersectObjects(objs);
-//                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-//                    console.log("collision leftWall" + collisionResults.length + " " + collisionResults[0].distance);
-//                }
-//
-//                objs = [this.backWall];
-//
-//                collisionResults = ray.intersectObjects(objs);
-//                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-//                    console.log("collision backWall" + collisionResults.length + " " + collisionResults[0].distance);
-//                }
+                
             }	
         }
         
@@ -434,7 +489,9 @@ module Arkanoid {
             return parseInt(str,16);
         }
 
-        private getRandomNumInRange = (n: number): number => {
+        private getRandomIntInRange = (n: number): number => {
+
+            n = Math.floor(n);
 
             var number = Math.floor(Math.random() * 10 * n) % n;
 
