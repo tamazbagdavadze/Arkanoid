@@ -2,31 +2,36 @@
 /// <reference path="Helpers.ts"/>
 /// <reference path="KeyCodeEnum.ts"/>
 /// <reference path="Directions.ts"/>
+/// <reference path="Config.ts"/>
 
 "use strict";
 
 module Arkanoid {
     export class ArkanoidGame {
 
+        private currentConfig:Config;
+
         scene: THREE.Scene;
         camera: THREE.PerspectiveCamera; // THREE.Camera; 
         renderer: THREE.WebGLRenderer;
 
         orbitControler: THREE.OrbitControls;
-
-        level  = GameLevel.Three;
-        blockSize = 2;
-        //blockColor = 0x00FFFF;
+        
         array : THREE.Mesh[][];
    
         playerItem: THREE.Mesh;
-        playerStep = 0.2;
         playerSize: number;
+        
 
         ball: THREE.Mesh;
-        ballStepSize: number;
+        
+        //ballStepSize: number;
+        //lineWidth = 10;
+        //level  = GameLevel.Three;
+        //blockSize = 2;
+        //playerStep = 0.2;
 
-        lineWidth = 10;
+        //blockColor = 0x00FFFF;
 
         gridColor = 0x006600;
 
@@ -36,68 +41,85 @@ module Arkanoid {
         leftWall: THREE.Object3D;
         backWall: THREE.Object3D;
 
-        t: TWEEN.Tween;
-
+        currentBallTween: TWEEN.Tween;
         
-        newGame() {
+        currentKeyTimeoutId:number = null;
+
+        get config(): Config {
+             return Config.clone(this.currentConfig);
+        }
+
+//        set config(config: Config) {
+//            this.currentConfig = config;
+//        }
+
+        constructor(domElementId:string) {
             this.scene = new THREE.Scene();
             this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
 
             this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             this.renderer.setSize(window.innerWidth, window.innerHeight);
-            document.getElementById("game").appendChild(this.renderer.domElement);
-            
-            this.orbitControler = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-            
+            document.getElementById(domElementId).appendChild(this.renderer.domElement);
+            this.orbitControler = new THREE.OrbitControls(this.camera, this.renderer.domElement);            
+        }
+
+        newGame = (config:Config = Config.getDefaultConfig())=> {
+
+            this.currentConfig = config;
+
             this.initBlocks();
             this.initPlayer();
             this.initBall();
+            this.buildWalls();
+
+            this.addLight();
             
+            this.resetCamera();
+
+            this.render();
+            this.initEvents();
+            
+//            this.start();
+        }
+        
+        private start =() => {
+            this.currentBallTween = new TWEEN.Tween(this.ball.position);
+            this.currentBallTween.to({ 'x': this.getRandomNumInRange(this.currentConfig.lineWidth / 2), 'z': -this.currentConfig.lineWidth }, 5000);
+            this.currentBallTween.onComplete(() => {
+                alert("fsfsdf");
+            });
+
+            this.currentBallTween.easing(TWEEN.Easing.Linear.None);
+            this.currentBallTween.start();
+        }
+
+        private addLight = () => {
             var light = new THREE.PointLight(0xffffff);
             light.position.set(-5, 5, 5);
             this.scene.add(light);
-            
+        }
 
-            this.buildWalls();
-
-           
+        private resetCamera = () => {
             this.camera.position.z = 25;
             this.camera.position.y = 20;
-            this.camera.lookAt(this.gridFloor.position);
-            
-            this.render();
-            this.initEvents();
-
-
-//            this.t = new TWEEN.Tween(this.leftWall.position);
-//            this.t.to({ 'x': this.rightWall.position.x }, 1000);
-//            this.t.onComplete(() => {
-//                alert("fsfsdf");
-//            });
-//
-//            this.t.easing(TWEEN.Easing.Linear.None);
-
-            //this.t.start();
-
-
-            //this.startBallMoving();
+            this.camera.lookAt(this.gridFloor.position); 
         }
-        
+
         private buildWalls = () => {
             
-            var areaSize = this.lineWidth * this.blockSize;
+            var areaSize = this.currentConfig.lineWidth * this.currentConfig.blockSize;
 
-            this.gridFloor = new THREE.GridHelper(this.lineWidth, this.blockSize);
+            this.gridFloor = new THREE.GridHelper(this.currentConfig.lineWidth, this.currentConfig.blockSize);
             this.gridFloor.setColors(this.gridColor, this.gridColor);
             this.gridFloor.position.set(0, -1, 0);
             this.scene.add(this.gridFloor);
 
             this.rightWall = new THREE.Object3D();
 
-            for (let i = this.lineWidth/-2 + 1; i < this.lineWidth/2; i++) {
-                let gridRightWall = new THREE.GridHelper(this.blockSize, this.blockSize / 4);
+            for (let i = this.currentConfig.lineWidth / -2 + 1; i < this.currentConfig.lineWidth/2; i++) {
+                let gridRightWall = new THREE.GridHelper(this.currentConfig.blockSize, this.currentConfig.blockSize / 4);
                 gridRightWall.setColors(this.gridColor, this.gridColor);
-                gridRightWall.position.set(i*this.blockSize, 0, 0);
+                gridRightWall.position.set(i * this.currentConfig.blockSize, 0, 0);
                 this.rightWall.add(gridRightWall);
             }
 
@@ -116,18 +138,7 @@ module Arkanoid {
             this.scene.add(this.backWall);
 
         }
-
-        private startBallMoving =() => {
-            setInterval(this.ballMove, 100);
-        }
-
-        private ballMove = () => {
-            this.ball.position.x += this.ballStepSize;
-            this.ball.position.y += this.ballStepSize;
-
-            
-        }
-
+        
         private initBall = () => {
             
             var geometry = new THREE.SphereGeometry(0.5, 32, 16);
@@ -139,7 +150,7 @@ module Arkanoid {
 
         private initPlayer = () => {
             
-            switch (this.level) {
+            switch (this.currentConfig.currentGameLevel) {
                 case GameLevel.One:
                 case GameLevel.Two:
                 {
@@ -162,7 +173,7 @@ module Arkanoid {
                 default :
                     throw new Error("wtf");
             }
-            
+
             var geometry = new THREE.BoxGeometry(this.playerSize, 0.5, 0.5);
             var material = new THREE.MeshLambertMaterial({color:0xd3d3d3, transparent:true, opacity: 0.8});
             this.playerItem = new THREE.Mesh(geometry, material);
@@ -172,25 +183,15 @@ module Arkanoid {
         }
 
         private initBlocks = () => {
-            var lineCount = this.level.valueOf();
+            var lineCount = this.currentConfig.currentGameLevel.valueOf();
             
-            this.array = make2DArray<THREE.Mesh>(this.lineWidth, lineCount);
-
-
-//            this.array = new Array<Array<THREE.Mesh>>(this.lineWidth);
-//
-//            for (let k = 0; k < this.lineWidth; k++) {
-//                this.array[k] = new Array<THREE.Mesh>(3);
-//            }
-
-
-
-
-            for (let i = 0; i < this.lineWidth; i++) {
+            this.array = make2DArray<THREE.Mesh>(this.currentConfig.lineWidth, lineCount);
+            
+            for (let i = 0; i < this.currentConfig.lineWidth; i++) {
 
                 for (let j = 0; j < lineCount; j++) {
 
-                    let block = this.createBlock(this.blockSize);
+                    let block = this.createBlock(this.currentConfig.blockSize);
 
                     block.position.z = j * 2 - 9;
                     block.position.x = i * 2 - 9;
@@ -199,39 +200,44 @@ module Arkanoid {
                     this.scene.add(block);
                 }
             }
-
-            console.log(this.array);
+            
         }
 
         private movePlayer = (direction: Directions) => {
 
-            var areaSize = this.lineWidth * this.blockSize;
-            
+            var areaSize = this.currentConfig.lineWidth * this.currentConfig.blockSize;
+            var playerStep = this.currentConfig.currentPlayerStep;
+            var playerX = this.playerItem.position.x;
+
+            var increment = 0;
+
             switch (direction) {
             case Directions.Left:
             {
-                if (this.playerItem.position.x - this.playerSize + 1 <= areaSize / -2) {
+                if (playerX - this.playerSize / 2 <= areaSize / -2) {
                     return;
                 }
-                this.playerItem.position.x -= this.playerStep;
+                increment = (-playerStep);
                 break;
             }
             case Directions.Right:
             {
-                if (this.playerItem.position.x + this.playerSize - 1 >= areaSize / 2) {
+                if (playerX + this.playerSize / 2 >= areaSize / 2) {
                     return;
                 }
-                this.playerItem.position.x += this.playerStep;
+                increment = (+playerStep);
                 break;
             }
 
             default:
             }
+
+            this.playerItem.position.x += increment;
         }
 
-        private initEvents = (): void => {
+        private initEvents = () => {
 
-            window.addEventListener("resize",  (e) :void => {
+            window.addEventListener("resize",  (e: UIEvent) => {
 
 //                var canvas = this.renderer.domElement;
 //
@@ -247,38 +253,65 @@ module Arkanoid {
 //                console.log(width+ " " + height);
 //                console.log(window.innerWidth + " " + window.innerHeight);
 //                
-            }, true);
+            });
+            
+            window.addEventListener("keydown", (e:KeyboardEvent) => {
 
-            window.addEventListener("keydown", (e) => {
+                if (this.currentKeyTimeoutId != null) {
+                    return;
+                }
 
                 switch (e.keyCode) {
-                case Keys.Left:
-                {
-                    this.movePlayer(Directions.Left);
-                    break;
-                }
-                case Keys.Up:
-                {
-                    break;
-                }
-                case Keys.Right:
-                {
-                    this.movePlayer(Directions.Right);
-                    break;
-                }
-                case Keys.Down:
-                {
-                    break;
-                }
+                    case Keys.Left:
+                    {
+                        this.currentKeyTimeoutId = setInterval(() => {
+                            this.movePlayer(Directions.Left);
+                        }, this.currentConfig.playerStepDelay);
+                        
+                        break;
+                    }
+                    case Keys.Up:
+                    {
+                        break;
+                    }
+                    case Keys.Right:
+                    {
+                        this.currentKeyTimeoutId = setInterval(() => {
+                            this.movePlayer(Directions.Right);
+                        }, this.currentConfig.playerStepDelay);
+                            
+                        break;
+                    }
+                    case Keys.Down:
+                    {
+                        break;
+                    }
 
-                default:
-                   // throw new Error("unknown keycode");
+                    default:{}
                 }
-
-            }, true);
-
-
+                
+            },true);
             
+            window.addEventListener("keyup", (e: KeyboardEvent) => {
+
+                if (this.currentKeyTimeoutId == null) {
+                    return;
+                }
+
+                switch (e.keyCode) {
+                    case Keys.Left:
+                    case Keys.Right:
+                        {
+                            clearInterval(this.currentKeyTimeoutId);
+                            this.currentKeyTimeoutId = null;
+                            
+                            break;
+                        }
+
+                    default:{}
+                }
+            },true);
+
         }
 
         private render = () => {
@@ -292,8 +325,8 @@ module Arkanoid {
             
             this.camera.updateProjectionMatrix();
 
-            requestAnimationFrame(this.render);
             this.renderer.render(this.scene, this.camera);
+            requestAnimationFrame(this.render);
         }
         
         private collision = () => {
@@ -305,7 +338,7 @@ module Arkanoid {
             for (let vertexIndex = 0; vertexIndex < ball.geometry.vertices.length; vertexIndex++) {
 
                 let localVertex = ball.geometry.vertices[vertexIndex].clone();
-                let globalVertex = localVertex.applyMatrix4(ball.matrix);
+                let globalVertex = localVertex.applyMatrix4(ball.matrixWorld);
                 let directionVector = globalVertex.sub(ball.position);
                 
                 let ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
@@ -314,8 +347,17 @@ module Arkanoid {
                 
                 let collisionResults = ray.intersectObjects(objs);
                 if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-                    console.log("collision blocks" + collisionResults.length+" " + collisionResults[0].distance);
+                    console.log("collision blocks " + collisionResults.length + " " + collisionResults[0].distance);
                 }
+
+                objs = [this.playerItem];
+
+                collisionResults = ray.intersectObjects(objs);
+                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+                    console.log("collision playerItem " + collisionResults.length + " " + collisionResults[0].distance);
+                }
+
+
 
 //                objs = [this.rightWall];
 //
@@ -392,6 +434,20 @@ module Arkanoid {
             return parseInt(str,16);
         }
 
+        private getRandomNumInRange = (n: number): number => {
+
+            var number = Math.floor(Math.random() * 10 * n) % n;
+
+            if (Math.floor(Math.random() * 100) % 2 === 0) {
+                return number;
+            } else {
+                return -number;
+            }
+        }
+
+        private round = (n:number, prc:number = 0):number => {
+            return +n.toFixed(prc);
+        }
     }
     
 }

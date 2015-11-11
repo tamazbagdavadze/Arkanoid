@@ -121,6 +121,7 @@
     <TypeScriptCompile Include="Scripts\typings\threejs\three-vreffect.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\threejs\three.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\tween.js\tween.js.d.ts" />
+    <TypeScriptCompile Include="Config.ts" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
