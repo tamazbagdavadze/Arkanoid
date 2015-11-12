@@ -98,6 +98,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="3DObjectTypes.ts" />
     <TypeScriptCompile Include="Arkanoid.ts" />
     <TypeScriptCompile Include="Directions.ts" />
     <TypeScriptCompile Include="GameLevel.ts" />

@@ -3,6 +3,7 @@
 /// <reference path="KeyCodeEnum.ts"/>
 /// <reference path="Directions.ts"/>
 /// <reference path="Config.ts"/>
+/// <reference path="3DObjectTypes.ts"/>
 
 "use strict";
 
@@ -22,7 +23,6 @@ module Arkanoid {
         playerItem: THREE.Mesh;
         playerSize: number;
         
-
         ball: THREE.Mesh;
         
         //ballStepSize: number;
@@ -40,11 +40,12 @@ module Arkanoid {
         rightWall: THREE.Object3D;
         leftWall: THREE.Object3D;
         backWall: THREE.Object3D;
+        
+        currentKeyTimeoutId: number = null;
 
-        currentBallTween: TWEEN.Tween;
+        currentBallIntervalId: number = null;
         
-        currentKeyTimeoutId:number = null;
-        
+
         get config(): Config {
              return Config.clone(this.currentConfig);
         }
@@ -85,20 +86,21 @@ module Arkanoid {
         private start = () => {
 
             //TODO remove this bullshit and move the fuckin ball
+            
+            var tempX = this.getRandomIntInRange(100) % 0.05;
+            var tempZ = this.getRandomIntInRange(100) % 0.05;
 
-            this.currentBallTween = new TWEEN.Tween(this.ball.position);
-            this.currentBallTween.to(
-            {
-                    'x': this.getRandomIntInRange(this.currentConfig.lineWidth / 2),
-                    'z': -this.currentConfig.lineWidth
-            }, 5000);
+            if (tempZ < 0)
+                tempZ = -tempZ;
 
-//            this.currentBallTween.onComplete(() => {
-//                alert("fsfsdf");
-//            });
+            this.currentConfig.ballStepX = tempX;
+            this.currentConfig.ballStepZ = tempZ;
 
-            this.currentBallTween.easing(TWEEN.Easing.Linear.None);
-            this.currentBallTween.start();
+            this.currentBallIntervalId = setInterval(() => {
+                this.ball.position.x += tempX;
+                this.ball.position.z -= tempZ;
+            }, 0);
+            
         }
 
         private addLight = () => {
@@ -120,6 +122,7 @@ module Arkanoid {
             this.gridFloor = new THREE.GridHelper(this.currentConfig.lineWidth, this.currentConfig.blockSize);
             this.gridFloor.setColors(this.gridColor, this.gridColor);
             this.gridFloor.position.set(0, -1, 0);
+            this.gridFloor.userData.objectType = _3DObjectTypes.Wall;
             this.scene.add(this.gridFloor);
 
             this.rightWall = new THREE.Object3D();
@@ -134,15 +137,18 @@ module Arkanoid {
             this.rightWall.position = new THREE.Vector3(-areaSize / 2, 1, 0);
             this.rightWall.rotation.x = Math.PI / 2;
             this.rightWall.rotation.z = Math.PI / 2;
+            this.rightWall.userData.objectType = _3DObjectTypes.Wall;
             this.scene.add(this.rightWall);
 
             this.leftWall = this.rightWall.clone();
             this.leftWall.position.x = areaSize / 2;
+            this.leftWall.userData.objectType = _3DObjectTypes.Wall;
             this.scene.add(this.leftWall);
 
             this.backWall = this.rightWall.clone();
             this.backWall.position = new THREE.Vector3(0, 1, -areaSize / 2);
             this.backWall.rotation.z = 0;
+            this.backWall.userData.objectType = _3DObjectTypes.Wall;
             this.scene.add(this.backWall);
 
         }
@@ -153,6 +159,7 @@ module Arkanoid {
             var material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
             this.ball = new THREE.Mesh(geometry, material);
             this.ball.position.set(0, -0.5, 0);
+            this.ball.userData.objectType = _3DObjectTypes.Ball;
             this.scene.add(this.ball);
         }
 
@@ -186,7 +193,7 @@ module Arkanoid {
             var material = new THREE.MeshLambertMaterial({color:0xd3d3d3, transparent:true, opacity: 0.8});
             this.playerItem = new THREE.Mesh(geometry, material);
             this.playerItem.position = new THREE.Vector3(0, -0.75, 9.75);
-
+            this.playerItem.userData.objectType = _3DObjectTypes.Player;
             this.scene.add(this.playerItem);
         }
 
@@ -200,7 +207,7 @@ module Arkanoid {
                 for (let j = 0; j < lineCount; j++) {
 
                     let block = this.createBlock(this.currentConfig.blockSize);
-
+                    block.userData.objectType = _3DObjectTypes.Block;
                     block.position.z = j * 2 - 9;
                     block.position.x = i * 2 - 9;
                     this.blocks[i][j] = block;
@@ -216,60 +223,67 @@ module Arkanoid {
             var blockVector = block.position.clone();
             this.removeBlock(block);
 
-            var miniBlocks = [];
-
-            for (let i = 0; i < 50; i++) {
-                let miniBlock = this.createBlock(0.2);
-                miniBlock.position = blockVector.clone();
-                miniBlocks.push(miniBlock);
-                this.scene.add(miniBlock);
-            }
-
+            var miniBlocks = this.getMiniBlocks(blockVector);
             var tweens = Array<TWEEN.Tween>(miniBlocks.length);
 
-            miniBlocks.forEach((obj, i, arr)=> {
+
+            // mini blocks expand logic
+            miniBlocks.forEach((obj: THREE.Object3D, i, arr)=> {
                 var tween = new TWEEN.Tween(obj.position);
                 
-                var rangeX = this.getRandomIntInRange(this.currentConfig.blockSize);
-                var rangeY = this.getRandomIntInRange(this.currentConfig.blockSize);
-                var rangeZ = this.getRandomIntInRange(this.currentConfig.blockSize);
-
-                var destination = new THREE.Vector3(rangeX, rangeY, rangeZ);
+                var rangeX = this.getRandomIntInRange(this.currentConfig.blockSize*2.5);
+                var rangeY = this.getRandomIntInRange(this.currentConfig.blockSize*2.5);
+                var rangeZ = this.getRandomIntInRange(this.currentConfig.blockSize*2.5);
+              
+                var destination = new THREE.Vector3(rangeX + obj.position.x,
+                    rangeY + obj.position.y, rangeZ + obj.position.z);
                 tween.onComplete(() => {
                     this.scene.remove(obj);
                     obj = null;
                 });
                 tween.to(destination, 1200);
-                tween.easing(TWEEN.Easing.Exponential.Out);
+                tween.easing(TWEEN.Easing.Back.In);
                 tween.onUpdate(() => {
-                    obj.rotation.x++;
-                    obj.rotation.y++;
-                    obj.rotation.z++;
+                    obj.rotation.x += Math.random();
+                    obj.rotation.y += Math.random();
+                    obj.rotation.z += Math.random();
                 });
                 tweens.push(tween);
             });
 
+            // start expand animation
             tweens.forEach((obj, i, arr) => {
                 obj.start();
             });
-
             
 
             //TODO random shit
         }
 
-        private removeBlock = (block: THREE.Object3D) => {
+        private getMiniBlocks = (vector:THREE.Vector3):THREE.Mesh[] => {
 
-            if (block == null) { // needs to repair other part
-                return;
+            var miniBlocks = Array<THREE.Mesh>(15);
+            var miniBlock = this.createBlock(0.2);
+
+            for (let i = 0; i < 15; i++) {
+                let clone = miniBlock.clone();
+                clone.position = vector.clone();
+                miniBlocks.push(clone);
+                clone.userData.objectType = _3DObjectTypes.MiniBlock;
+                this.scene.add(clone);
             }
 
+            return miniBlocks;
+        }
+
+        private removeBlock = (block: THREE.Object3D) => {
+            
             var lineCount = this.currentConfig.currentGameLevel.valueOf();
             var lineWidth = this.currentConfig.lineWidth;
 
             for (let i = 0; i < lineWidth; i++) {
                 for (let j = 0; j < lineCount; j++) {
-                    if (this.blocks[i][j].position.equals(block.position)) {
+                    if (this.blocks[i][j] != null && this.blocks[i][j].position.equals(block.position)) {
                         this.scene.remove(this.blocks[i][j]);
                         this.blocks[i][j] = null;
                     }
@@ -420,10 +434,60 @@ module Arkanoid {
                 let objs = convert2DTo1DArray<THREE.Mesh>(this.blocks);
                 
                 let collisionResults = ray.intersectObjects(objs);
+
+                collisionResults = collisionResults.filter((i) => {
+                     return <_3DObjectTypes>i.object.userData.objectType !== _3DObjectTypes.MiniBlock;
+                });
+
                 if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-                    console.log(`collision blocks ${collisionResults.length} ${collisionResults[0].distance}`);
-                    this.currentBallTween.stop();
+                    //console.log(`collision blocks ${collisionResults.length} ${collisionResults[0].distance}`);
+                    
+                    collisionResults.forEach((v, i, a) => {
+                        var type = v.object.userData.objectType;
+                        console.log(_3DObjectTypes[type]);
+                    });
+
+                    clearInterval(this.currentBallIntervalId);
+
+                    let touchPoint = collisionResults[0].point;
+
                     let block = collisionResults[0].object;
+                    let ballCenter = this.ball.position;
+
+
+                    // up
+                    if (touchPoint.z < ballCenter.z) {
+                        
+                        this.currentConfig.ballStepX = - this.currentConfig.ballStepX;
+                        this.currentConfig.ballStepZ = - this.currentConfig.ballStepZ;
+
+                        this.currentBallIntervalId = setInterval(() => {
+                            this.ball.position.x += this.currentConfig.ballStepX;
+                            this.ball.position.z -= this.currentConfig.ballStepZ;
+                        }, 0);
+
+                    }
+
+                    // down
+                    if (touchPoint.z > ballCenter.z) {
+                        
+                    }
+
+                    // left
+                    if (touchPoint.x < ballCenter.x) {
+                        
+                    }
+
+                    // right
+                    if (touchPoint.x > ballCenter.x) {
+                        
+                    }
+
+                    //TODO change sign of steps
+
+                    //TODO turning the ball
+
+                    
                     this.breakBlock(block);
                 }
 
