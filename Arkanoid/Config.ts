@@ -6,8 +6,8 @@
         currentGameLevel: GameLevel;
         blockSize :number;
         currentPlayerStep: number;
-        ballStepX :number; // still not used
-        ballStepZ :number; // still not used
+        ballStepX :number; 
+        ballStepZ :number; 
         lineWidth: number;
         playerStepDelay:number;
 

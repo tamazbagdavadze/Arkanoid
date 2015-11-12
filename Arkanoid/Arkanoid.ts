@@ -87,10 +87,10 @@ module Arkanoid {
 
             //TODO remove this bullshit and move the fuckin ball
             
-            var tempX = this.getRandomIntInRange(100) % 0.05;
-            var tempZ = this.getRandomIntInRange(100) % 0.05;
+            var tempX = this.getRandomIntInRange(100) % 0.1;
+            var tempZ = this.getRandomIntInRange(100) % 0.1;
 
-            if (tempZ < 0)
+            if (tempZ > 0)
                 tempZ = -tempZ;
 
             this.currentConfig.ballStepX = tempX;
@@ -98,7 +98,7 @@ module Arkanoid {
 
             this.currentBallIntervalId = setInterval(() => {
                 this.ball.position.x += tempX;
-                this.ball.position.z -= tempZ;
+                this.ball.position.z += tempZ;
             }, 0);
             
         }
@@ -134,14 +134,14 @@ module Arkanoid {
                 this.rightWall.add(gridRightWall);
             }
 
-            this.rightWall.position = new THREE.Vector3(-areaSize / 2, 1, 0);
+            this.rightWall.position = new THREE.Vector3(areaSize / 2, 1, 0);
             this.rightWall.rotation.x = Math.PI / 2;
             this.rightWall.rotation.z = Math.PI / 2;
             this.rightWall.userData.objectType = _3DObjectTypes.Wall;
             this.scene.add(this.rightWall);
 
             this.leftWall = this.rightWall.clone();
-            this.leftWall.position.x = areaSize / 2;
+            this.leftWall.position.x = areaSize / -2;
             this.leftWall.userData.objectType = _3DObjectTypes.Wall;
             this.scene.add(this.leftWall);
 
@@ -418,11 +418,61 @@ module Arkanoid {
         }
         
         private collision = () => {
-
-            var ball = this.ball;
-
-            var originPoint = ball.position.clone();
             
+            var ball = this.ball;
+            var originPoint = ball.position.clone();
+            var areaSize = this.currentConfig.lineWidth * this.currentConfig.blockSize;
+
+            // TODO refactor and change with correct signs
+            var tempFunction = ()=> {
+                clearInterval(this.currentBallIntervalId);
+
+                this.currentConfig.ballStepX = - this.currentConfig.ballStepX;
+                this.currentConfig.ballStepZ = - this.currentConfig.ballStepZ;
+
+                this.currentBallIntervalId = setInterval(() => {
+                    this.ball.position.x += this.currentConfig.ballStepX;
+                    this.ball.position.z += this.currentConfig.ballStepZ;
+                }, 0);
+            }
+
+
+            // walls intersections
+            // TODO store ball's radius in config
+            if (originPoint.x - 0.5 <= this.leftWall.position.x) {
+                console.log("leftWall " + originPoint.x + " " + this.leftWall.position.x);
+                
+                tempFunction();
+
+                return;
+            }
+
+            if (originPoint.x + 0.5 >= this.rightWall.position.x) {
+                console.log("rightWall " + originPoint.x + " " + this.rightWall.position.x);
+
+                tempFunction();
+
+                return;
+            }
+
+            if (originPoint.z - 0.5 <= this.backWall.position.z) {
+                console.log("backWall " + originPoint.x + " " + this.backWall.position.x);
+                
+                tempFunction();
+
+                return;
+            }
+
+            if (originPoint.z + 0.5 >= this.backWall.position.z + areaSize) {
+                console.log("front " + originPoint.x + " " + (this.backWall.position.x + areaSize) );
+                
+                tempFunction();
+
+                return;
+            }
+            
+            // block intersections
+            //TODO playerIntersection
             for (let vertexIndex = 0; vertexIndex < ball.geometry.vertices.length; vertexIndex++) {
 
                 let localVertex = ball.geometry.vertices[vertexIndex].clone();
@@ -463,7 +513,7 @@ module Arkanoid {
 
                         this.currentBallIntervalId = setInterval(() => {
                             this.ball.position.x += this.currentConfig.ballStepX;
-                            this.ball.position.z -= this.currentConfig.ballStepZ;
+                            this.ball.position.z += this.currentConfig.ballStepZ;
                         }, 0);
 
                     }
@@ -491,12 +541,12 @@ module Arkanoid {
                     this.breakBlock(block);
                 }
 
-                objs = [this.playerItem];
-
-                collisionResults = ray.intersectObjects(objs);
-                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-                    console.log(`collision playerItem ${collisionResults.length} ${collisionResults[0].distance}`);
-                }
+//                objs = [this.playerItem];
+//
+//                collisionResults = ray.intersectObjects(objs);
+//                if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+//                    console.log(`collision playerItem ${collisionResults.length} ${collisionResults[0].distance}`);
+//                }
                 
             }	
         }
