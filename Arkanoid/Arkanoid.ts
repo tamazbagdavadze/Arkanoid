@@ -77,11 +77,66 @@ module Arkanoid {
             this.render();
             this.initEvents();
             
-            this.start();
+            this.moveBall();
         }
         
-        private start = () => {
+        private moveBall = () => {
+
+            this.ballNextStep();
+            var collision = this.collision();
+
+            var ball = this.ball;
+
+            if (collision.success) {
+                var point = collision.point;
+
+                // find prev pos of ball, find and change direction !!   
+            }
+
+            setTimeout(() => {
+                this.moveBall();
+            }, 50);
+        }
+        
+        private ballNextStep = () => {
+            this.ball.position.x -= this.currentConfig.ballStepX;
+            this.ball.position.z -= this.currentConfig.ballStepZ;
+        }
+
+        private collision = () => {
+
+            var  rays = [
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(1, 0, 1),
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(1, 0, -1),
+                new THREE.Vector3(0, 0, -1),
+                new THREE.Vector3(-1, 0, -1),
+                new THREE.Vector3(-1, 0, 0),
+                new THREE.Vector3(-1, 0, 1)
+            ];
+
+            var caster = new THREE.Raycaster();
+
+
+            var lineCount = this.currentConfig.currentGameLevel.valueOf();
+
+            var collisions = [];
+
+            var blocks = convert2DTo1DArray(this.blocks);
             
+            var distance = 1;
+
+            for (let i = 0; i < rays.length; i += 1) {
+                caster.set(this.ball.position, rays[i]);
+                collisions = caster.intersectObjects(blocks);
+                if (collisions.length > 0 && collisions[0].distance <= distance) {
+                    
+                    return {success:true, point: collisions[0].point};
+                }
+            }
+
+            return {success:false, point: undefined};
         }
 
         private addLight = () => {
@@ -136,10 +191,10 @@ module Arkanoid {
       
         private initBall = () => {
             
-            var geometry = new THREE.SphereGeometry(0.5, 32, 16);
+            var geometry = new THREE.SphereGeometry(1, 32, 16);
             var material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
             this.ball = new THREE.Mesh(geometry, material);
-            this.ball.position.set(0, -0.5, 0);
+            this.ball.position.set(0, 0, 0);
             this.ball.userData.objectType = _3DObjectTypes.Ball;
             this.scene.add(this.ball);
         }
@@ -384,9 +439,7 @@ module Arkanoid {
         }
 
         private render = () => {
-
-            //this.collision();
-
+            
             TWEEN.update();
 
             this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -396,10 +449,6 @@ module Arkanoid {
 
             this.renderer.render(this.scene, this.camera);
             requestAnimationFrame(this.render);
-        }
-        
-        private collision = () => {
-            
         }
         
         private createBlock = (x: number, y: number = null, z: number = null): THREE.Mesh => {
