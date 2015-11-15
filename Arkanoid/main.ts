@@ -11,3 +11,5 @@ var config = Config.getDefaultConfig();
 config.currentGameLevel = Arkanoid.GameLevel.Three;
 
 game.newGame(config);
+
+

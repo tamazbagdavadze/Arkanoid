@@ -29,7 +29,6 @@ module Arkanoid {
 
         ballDelay = 1;
         
-
         gridColor = 0x006600;
 
         gridFloor: THREE.GridHelper;
@@ -41,19 +40,7 @@ module Arkanoid {
         currentKeyTimeoutId: number = null;
 
         currentBallIntervalId: number = null;
-
-
-
-
-       
-        get config(): Config {
-             return Config.clone(this.currentConfig);
-        }
-
-//        set config(config: Config) {
-//            this.currentConfig = config;
-//        }
-
+        
         constructor(domElementId:string) {
             this.scene = new THREE.Scene();
             this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
@@ -81,16 +68,24 @@ module Arkanoid {
             this.initEvents();
 
             this.ballPrevPos = this.ball.position.clone();
-
-
-            this.currentConfig.ballStepX = 0.05;
-            this.currentConfig.ballStepZ = 0.03;
-
-
+            
+            this.currentConfig.ballStepX = this.randomStartStep();
+            this.currentConfig.ballStepZ = this.randomStartStep()+0.01;
+            
             this.start();
 
         }
         
+        private randomStartStep = ()=> {
+            var n = Math.random();
+            n = Math.floor(n * 10000);
+            n = n % 0.08;
+            if (Math.random() > 0.4) {
+                n = -n;
+            }
+            return n;
+        }
+
         private start = () => {
 
             this.currentBallIntervalId = setInterval(() => {
@@ -104,7 +99,6 @@ module Arkanoid {
 
         }
         
-
         private onBallMove = () => {
 
             var collisionToBlockResult = this.collisionToBlock();
@@ -117,6 +111,15 @@ module Arkanoid {
 
             var halfAreaSize = this.currentConfig.lineWidth * this.currentConfig.blockSize / 2;
             
+
+            if (collisionToBlockResult.success && collisionToBlockResult.collision.object.userData.objectType === _3DObjectTypes.Player) {
+                   clearInterval(this.currentBallIntervalId);
+
+                   this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                   this.start();
+            }
+            else
+                
             if (collisionToBlockResult.success) {
                 
                 var block = collisionToBlockResult.collision.object;
@@ -225,18 +228,22 @@ module Arkanoid {
                         this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
                         this.start();
                     }
-                } else if (ballPos.z > halfAreaSize) {
-                    if (ballPrevPos.x > ballPos.x) { // left
-                        clearInterval(this.currentBallIntervalId);
+                } else if (ballPos.z > halfAreaSize - 0.4) {
 
-                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
-                        this.start();
-                    } else {
-                        clearInterval(this.currentBallIntervalId);
+                    clearInterval(this.currentBallIntervalId);
 
-                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
-                        this.start();
-                    }
+                    alert("game over");
+//                    if (ballPrevPos.x > ballPos.x) { // left
+//                        clearInterval(this.currentBallIntervalId);
+//
+//                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+//                        this.start();
+//                    } else {
+//                        clearInterval(this.currentBallIntervalId);
+//
+//                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+//                        this.start();
+//                    }
                 }
             }
         }
@@ -263,11 +270,13 @@ module Arkanoid {
 
             for (let i = 0; i < rays.length; i += 1) {
                 caster.set(this.ball.position, rays[i]);
+                blocks.push(this.playerItem);
                 collisions = caster.intersectObjects(blocks);
                 
                 if (collisions.length > 0 && collisions[0].distance <= distance) {
                     
-                    if(collisions[0].object.userData.objectType === _3DObjectTypes.Block)
+                    if (collisions[0].object.userData.objectType === _3DObjectTypes.Block || 
+                        collisions[0].object.userData.objectType === _3DObjectTypes.Player)
                         return {success:true, collision: collisions[0]};
                 }
             }
