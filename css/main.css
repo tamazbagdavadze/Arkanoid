@@ -1,0 +1,27 @@
+﻿html, body{
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: url('../resources/DEEP_SPACE.jpg');
+    overflow: hidden;
+}
+
+#game {
+    width: 100%;
+}
+
+
+
+
+.hidden{
+    display: none;
+}
+
+.clear{
+    clear: both;
+}
+
