@@ -41,8 +41,11 @@ module Arkanoid {
         currentKeyTimeoutId: number = null;
 
         currentBallIntervalId: number = null;
-        
 
+
+
+
+       
         get config(): Config {
              return Config.clone(this.currentConfig);
         }
@@ -76,35 +79,173 @@ module Arkanoid {
 
             this.render();
             this.initEvents();
-            
-            this.moveBall();
+
+            this.ballPrevPos = this.ball.position.clone();
+
+
+            this.currentConfig.ballStepX = 0.05;
+            this.currentConfig.ballStepZ = 0.03;
+
+
+            this.start();
+
         }
         
-        private moveBall = () => {
+        private start = () => {
 
-            this.ballNextStep();
-            var collision = this.collision();
+            this.currentBallIntervalId = setInterval(() => {
+                this.ball.position.x += this.currentConfig.ballStepX;
+                
+                this.ball.position.z += this.currentConfig.ballStepZ;
+                
+                this.onBallMove();
+
+            },0);
+
+        }
+        
+
+        private onBallMove = () => {
+
+            var collisionToBlockResult = this.collisionToBlock();
 
             var ball = this.ball;
+            var ballPos = ball.position;
+            
+            var ballPrevPos = this.ballPrevPos.clone();
+            this.ballPrevPos = ball.position.clone();
 
-            if (collision.success) {
-                var point = collision.point;
+            var halfAreaSize = this.currentConfig.lineWidth * this.currentConfig.blockSize / 2;
+            
+            if (collisionToBlockResult.success) {
+                
+                var block = collisionToBlockResult.collision.object;
+                var touchPoint = collisionToBlockResult.collision.point;
+                this.breakBlock(block);
 
-                // find prev pos of ball, find and change direction !!   
+                if (ballPrevPos.x >= ballPos.x) {
+                    if (ballPrevPos.z >= ballPos.z) { // x--, z-- 
+
+                        if (touchPoint.x < ballPos.x) { // left up (left)
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                            this.start();
+
+                        } else { // left up (up)                 
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                            this.start();
+                        }
+                    } else { // x--, z++
+
+                        if (touchPoint.z > ballPos.z) { // left down (down)
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                            this.start();
+
+                        } else {
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                            this.start();
+                        }
+                    }
+                } else {
+                    if (ballPrevPos.z >= ballPos.z) { // x++, z--
+
+                        if (touchPoint.x > ballPos.x) { // right up ( right )
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                            this.start();
+
+                        } else { // right up (up)
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                            this.start();
+                        }
+                    } else { // x++, z++
+
+                        if (touchPoint.z > ballPos.z) { // right down (down)
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                            this.start();
+
+                        } else {
+                            clearInterval(this.currentBallIntervalId);
+
+                            this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                            this.start();
+                        }
+                    }
+                }
+            } else {                               // outside
+                if (ballPos.x <= -halfAreaSize) {
+                    if (ballPrevPos.z > ballPos.z) { // up
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                        this.start();
+
+                    } else {
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                        this.start();
+                    }
+                }
+                else if (ballPos.x > halfAreaSize) {
+                    if (ballPrevPos.z > ballPos.z) { // up
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                        this.start();
+                    } else {
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepX = -this.currentConfig.ballStepX;
+                        this.start();
+                    }
+                }
+
+                else if (ballPos.z <= -halfAreaSize) { // up
+                    if (ballPrevPos.x > ballPos.x) { // left
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                        this.start();
+                    } else {
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                        this.start();
+                    }
+                } else if (ballPos.z > halfAreaSize) {
+                    if (ballPrevPos.x > ballPos.x) { // left
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                        this.start();
+                    } else {
+                        clearInterval(this.currentBallIntervalId);
+
+                        this.currentConfig.ballStepZ = -this.currentConfig.ballStepZ;
+                        this.start();
+                    }
+                }
             }
-
-            setTimeout(() => {
-                this.moveBall();
-            }, 50);
-        }
-        
-        private ballNextStep = () => {
-            this.ball.position.x -= this.currentConfig.ballStepX;
-            this.ball.position.z -= this.currentConfig.ballStepZ;
         }
 
-        private collision = () => {
-
+        private collisionToBlock = () => {
+            
+            var collisions: THREE.Intersection[];
+            var blocks = convert2DTo1DArray(this.blocks) as THREE.Object3D[];
+            
             var  rays = [
                 new THREE.Vector3(0, 0, 1),
                 new THREE.Vector3(1, 0, 1),
@@ -117,26 +258,46 @@ module Arkanoid {
             ];
 
             var caster = new THREE.Raycaster();
-
-
-            var lineCount = this.currentConfig.currentGameLevel.valueOf();
-
-            var collisions = [];
-
-            var blocks = convert2DTo1DArray(this.blocks);
             
-            var distance = 1;
+            var distance = 0.2;
 
             for (let i = 0; i < rays.length; i += 1) {
                 caster.set(this.ball.position, rays[i]);
                 collisions = caster.intersectObjects(blocks);
+                
                 if (collisions.length > 0 && collisions[0].distance <= distance) {
                     
-                    return {success:true, point: collisions[0].point};
+                    if(collisions[0].object.userData.objectType === _3DObjectTypes.Block)
+                        return {success:true, collision: collisions[0]};
                 }
             }
 
-            return {success:false, point: undefined};
+            return { success: false, collision: undefined};
+        }
+
+        private getCollisionDirection = (point:THREE.Vector3):Directions => {
+
+            var ballPos = this.ball.position;
+            var ballPrevPos = this.getBallPreviousPosition();
+
+            var stepX = this.currentConfig.ballStepX;
+            var stepZ = this.currentConfig.ballStepZ;
+
+            if (stepX > 0 && stepZ > 0) {
+                if (point.x > 0) {//??????
+                    
+                }
+            }
+
+
+            return null;
+        }
+
+        private getBallPreviousPosition = ():THREE.Vector3 => {
+            var pos = this.ball.position;
+            pos.x -= this.currentConfig.ballStepX;
+            pos.z -= this.currentConfig.ballStepZ;
+            return pos;
         }
 
         private addLight = () => {
@@ -191,10 +352,10 @@ module Arkanoid {
       
         private initBall = () => {
             
-            var geometry = new THREE.SphereGeometry(1, 32, 16);
+            var geometry = new THREE.SphereGeometry(0.2, 32, 16);
             var material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
             this.ball = new THREE.Mesh(geometry, material);
-            this.ball.position.set(0, 0, 0);
+            this.ball.position.set(0, -0.8, 0);
             this.ball.userData.objectType = _3DObjectTypes.Ball;
             this.scene.add(this.ball);
         }
@@ -519,6 +680,5 @@ module Arkanoid {
         private round = (n:number, prc:number = 0):number => {
             return +n.toFixed(prc);
         }
-    }
-    
+    }    
 }

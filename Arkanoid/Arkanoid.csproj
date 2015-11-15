@@ -76,6 +76,7 @@
     <Content Include="index.html" />
     <Content Include="packages.config" />
     <None Include="Scripts\jquery-2.1.4.intellisense.js" />
+    <Content Include="Scripts\ammo.js" />
     <Content Include="Scripts\jquery-2.1.4.js" />
     <Content Include="Scripts\jquery-2.1.4.min.js" />
     <Content Include="Scripts\jquery-2.1.4.min.map" />
@@ -89,6 +90,7 @@
   <ItemGroup>
     <Content Include="Scripts\orbitControl.js" />
     <Content Include="Scripts\physi.js" />
+    <Content Include="Scripts\physijs_worker.js" />
     <Content Include="Scripts\three.js\build\three.js" />
     <Content Include="Scripts\three.js\build\three.min.js" />
     <Content Include="Scripts\tween.js" />
